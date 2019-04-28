@@ -15,6 +15,6 @@ cmake --build .
 ```
 
 ## Własna zabawa z korutynami
-jeżeli chcesz napisać własny przykład korutyn katalog testy jest właśnie dla Ciebie!
+jeżeli chcesz napisać własny przykład korutyn katalog przykłady/testy jest właśnie dla Ciebie!
 
 
