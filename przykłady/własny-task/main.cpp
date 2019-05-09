@@ -104,7 +104,7 @@ struct scheduler {
   struct promise_type;
   using this_coro_t = std::experimental::coroutine_handle<promise_type>;
   scheduler(this_coro_t this_coro) : coro(this_coro) {}
-  scheduler(const scheduler &rhs) : coro(rhs.coro) {}
+  scheduler(const scheduler &rhs) = default;
 
   struct promise_type {
     scheduler get_return_object() { return this_coro_t::from_promise(*this); }
@@ -114,32 +114,20 @@ struct scheduler {
     void return_void() {}
   };
 
-  bool finished() { return coro.done(); }
-
-  void resume() { coro.resume(); }
-
   this_coro_t coro;
 };
 
-scheduler sched_wrap(task<int> task) {
+scheduler start_task(task<int> task) {
   int value = co_await task;
   std::cout << "finished waiting for: " << value << std::endl;
 }
 
 void sched(std::vector<task<int>> tasks) {
-  std::vector<scheduler> schedulers;
-  schedulers.reserve(tasks.size());
+  std::vector<scheduler> starters;
+  starters.reserve(tasks.size());
 
   for (auto &task : tasks) {
-    schedulers.emplace_back(sched_wrap(task));
-  }
-
-  while (not std::all_of(schedulers.begin(), schedulers.end(),
-                         [](scheduler &sched) { return sched.finished(); })) {
-    for (auto &sched : schedulers) {
-      if (not sched.finished())
-        sched.resume();
-    }
+    starters.emplace_back(start_task(task));
   }
 }
 
