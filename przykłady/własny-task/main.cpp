@@ -25,9 +25,17 @@ public:
   struct promise_type;
   using coro_handle_t = std::experimental::coroutine_handle<promise_type>;
   struct final_task_awaiter;
-
-public:
   task(coro_handle_t handle) : coro_handle_(handle) {}
+
+  task(task&& rhs) : coro_handle_(rhs.coro_handle_){
+    rhs.coro_handle_=nullptr;
+  }
+  ~task(){
+    if(coro_handle_)
+      coro_handle_.destroy();
+  }
+
+  task& operator=(task&) = delete;
   auto operator co_await();
   T result() { return coro_handle_.promise().result(); }
 
@@ -117,25 +125,22 @@ struct scheduler {
   this_coro_t coro;
 };
 
-scheduler start_task(task<int> task) {
+scheduler start_task(task<int>& task) {
   int value = co_await task;
   std::cout << "finished waiting for: " << value << std::endl;
 }
 
-void sched(std::vector<task<int>> tasks) {
-  std::vector<scheduler> starters;
-  starters.reserve(tasks.size());
+template <typename... Task>
+void sched(Task&&... tasks) {
+  std::vector<scheduler> schedulers;
 
-  for (auto &task : tasks) {
-    starters.emplace_back(start_task(task));
-  }
+  (start_task(tasks),...);
 }
 
 int main() {
-
   cppcoro::single_consumer_event event;
 
-  sched({[&event]() -> task<int> {
+  sched([&event]() -> task<int> {
            co_await event;
            std::cout << "pre resetting event" << std::endl;
            event.reset();
@@ -169,5 +174,5 @@ int main() {
              co_return 4;
            }
            ();
-         }()});
+         }());
 }
